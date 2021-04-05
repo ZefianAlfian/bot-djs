@@ -1,0 +1,7 @@
+node_modules
+
+bot_session.json
+
+package-lock.json
+
+.vscode
