@@ -33,7 +33,8 @@ async function main() {
   let WAConnection = simple.WAConnection(_WAConnection);
   const client = new WAConnection();
   client.logger.level = "silent";
-
+  client.browserDescription = Browsers.macOS("Safari");
+  
   client.commands = new Collection();
   client.aliases = new Collection();
   /* client.categories = fs.readdirSync("./commands");
@@ -41,7 +42,7 @@ async function main() {
     require(`./handlers/${handler}`)(client);
   });
   */
-
+ 
   client.on("qr", (qr) => {
     qrcode.generate(qr, { small: true });
     log(
@@ -90,7 +91,6 @@ async function main() {
     );
   });
 
-  client.browserDescription = Browsers.macOS("Safari");
   await client.connect({ timeoutMs: 50 * 1000 });
   client.setMaxListeners(35);
 
