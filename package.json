@@ -19,6 +19,8 @@
     "chalk": "^4.1.0",
     "file-type": "^16.3.0",
     "fs": "0.0.1-security",
+    "humanize-duration": "^3.25.1",
+    "moment": "^2.29.1",
     "moment-timezone": "^0.5.33",
     "node-fetch": "^2.6.1",
     "path": "^0.12.7",

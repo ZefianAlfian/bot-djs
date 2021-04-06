@@ -1,4 +1,4 @@
-// third party module
+//third party module
 let {
   WAConnection: _WAConnection,
   MessageType,
@@ -12,41 +12,53 @@ let {
   ChatModification,
   waChatKey,
   WA_DEFAULT_EPHEMERAL,
+  Browsers,
 } = require("@adiwajshing/baileys");
+let { text } = MessageType;
 const qrcode = require("qrcode-terminal");
-const moment = require("moment-timezone");
 const fs = require("fs");
+const moment = require("moment-timezone");
 
-// local module
-const { log, warning, sukses, error } = require("./helpers/values.js");
-const settings = JSON.parse(fs.readFileSync("./config/settings.json"));
-const Collection = require("./lib/discordjs/Collection.js");
-let simple = require("./lib/baileys/simple.js");
-let WAConnection = simple.WAConnection(_WAConnection);
+//local module
+const Collection = require("./lib/discordjs/Collection");
+const { warning, error, sukses, log } = require("./app/helpers/values");
 
-const client = new WAConnection();
+const { msgFilter } = require("./app/helpers/msgFilter");
+const simple = require("./lib/baileys/simple");
 
-async function start() {
-  client.logger.level = "warn";
+//configuration
+const settings = JSON.parse(fs.readFileSync("./app/config/settings.json"));
+
+async function main() {
+  let WAConnection = simple.WAConnection(_WAConnection);
+  const client = new WAConnection();
+  client.logger.level = "silent";
+
+  client.commands = new Collection();
+  client.aliases = new Collection();
+  /* client.categories = fs.readdirSync("./commands");
+  ["command"].forEach((handler) => {
+    require(`./handlers/${handler}`)(client);
+  });
+  */
+
   client.on("qr", (qr) => {
     qrcode.generate(qr, { small: true });
-    console.log(
-      `[ ${moment
-        .tz("Asia/Jakarta")
-        .format("HH:mm:ss")} ] Scan qrcode with whatsapp!`
+    log(
+      `[ ${moment.tz("Asia/Jakarta").format("HH:mm:ss")} ] ` +
+        warning("Scan qr code with whatsapp")
     );
   });
-  client.on("credentials-updated", () => {
-    const authInfo = client.base64EncodedAuthInfo();
-    log(
-      `[ ${moment.tz("Asia/Jakarta").format("HH:mm:ss")} ] ${warning(
-        "Credentials updated!"
-      )}`
-    );
 
+  client.on("credentials-updated", () => {
+    const authinfo = client.base64EncodedAuthInfo();
+    log(
+      `[ ${moment.tz("Asia/Jakarta").format("HH:mm:ss")} ] ` +
+        warning("Credentials Updated")
+    );
     fs.writeFileSync(
       "./bot_session.json",
-      JSON.stringify(authInfo, null, "\t")
+      JSON.stringify(authinfo, null, "\t")
     );
   });
 
@@ -74,34 +86,41 @@ async function start() {
   client.on("open", async () => {
     log(
       `[ ${moment.tz("Asia/Jakarta").format("HH:mm:ss")} ] ` +
-        warning("Bot Is Online Now!!")
+        sukses("Bot Is Online Now!!")
     );
   });
 
+  client.browserDescription = Browsers.macOS("Safari");
+  await client.connect({ timeoutMs: 50 * 1000 });
+  client.setMaxListeners(35);
+
   client.on("chat-update", async (m) => {
     if (!m.hasNewMessage) return;
-    if (!m.messages && !chatUpdate.count) return;
+    if (!m.messages && !m.count) return;
     m = m.messages.all()[0];
-
     try {
       simple.smsg(client, m);
-      if (m.isBaileys) return;
-      let groupMetadata = m.isGroup ? await client.groupMetadata(m.chat) : {};
-      let participants = m.isGroup ? groupMetadata.participants : [];
-      let user = m.isGroup ? participants.find((u) => u.jid == m.sender) : {}; // User Data
-      let bot = m.isGroup
-        ? participants.find((u) => u.jid == client.user.jid)
-        : {}; // Your Data
-      let isAdmin = user.isAdmin || user.isSuperAdmin || false; // Is User Admin?
-      let isBotAdmin = bot.isAdmin || bot.isSuperAdmin || false; // Are you Admin?
+      console.log(m.text)
     } catch (e) {
-      if (settings.isDevelop) {
-        console.log(e);
-        return false;
-      }
-      console.log(error(e));
+      settings.isDevelop ? log(e) : log(error(e));
     }
+  });
+
+  client.on("CB:action,,call", async (json) => {
+    const callerId = json[2][0][1].from;
+    log(
+      `${warning("[WARN]")} ${error(callerId.split("@")[0] + " is calling!")}`
+    );
+    log(`${warning("[WARN]")} ${error("Process Blocked")}`);
+    client.sendMessage(callerId, "Don't call or I'll block you!!", text);
+    client.sendMessage(callerId, "For unblock you can contact my owner", text);
+
+    setTimeout(function () {
+      client
+        .blockUser(callerId, "add") // Block user
+        .then((res) => log(warning("[INFO]"), error("Succses block contact")));
+    }, 5000);
   });
 }
 
-start();
+main();
